@@ -4,6 +4,12 @@
 
 It uses ONNX Runtime with an RVM-style video matting model to produce a soft alpha matte instead of a hard binary mask. The current release focuses on OBS Studio on Linux, CUDA acceleration when available, and graceful CPU fallback for testing.
 
+## Demo
+
+![Frackground background removal demo](docs/media/demo.gif)
+
+Frackground tracks head movement while preserving hair and face detail. A higher-quality MP4 version is available at [`docs/media/demo.mp4`](docs/media/demo.mp4).
+
 ## Features
 
 - OBS video filter for person/background separation.
