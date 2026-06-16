@@ -20,9 +20,21 @@ Frackground tracks head movement while preserving hair and face detail. A higher
 - Raw frame path for common camera/media formats.
 - Debug mask preview for tuning.
 
+## Community
+
+- Fracktron: https://fracktron.com
+- Discord: https://discord.gg/VgyvqkQntp
+- Twitch: https://twitch.tv/infectedresearch
+
 ## Status
 
 This project is alpha-quality but usable for testing. Linux is the primary target. The binary artifact is expected to be compatible only with similar OBS/libobs and ONNX Runtime versions to the build host.
+
+## Platform Support
+
+- Linux x86_64: alpha, actively tested.
+- Windows: WIP.
+- macOS: WIP.
 
 ## Requirements
 

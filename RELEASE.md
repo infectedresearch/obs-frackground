@@ -10,6 +10,7 @@ Initial Linux alpha for `obs-frackground`.
 - Background removal / auto greenscreen with transparent output.
 - ONNX Runtime inference using the bundled RobustVideoMatting MobileNetV3 FP16 model.
 - CUDA preference with CPU fallback.
+- Windows and macOS support are WIP.
 
 ### Artifact Install
 
