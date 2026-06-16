@@ -1,0 +1,73 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+uniform texture2d matte;
+uniform float test_matte_strength;
+uniform float use_model_matte;
+uniform float edge_softness;
+uniform float2 matte_texel;
+uniform float debug_view;
+
+sampler_state linear_clamp {
+    Filter    = Linear;
+    AddressU  = Clamp;
+    AddressV  = Clamp;
+};
+
+struct VertData {
+    float4 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+struct VertOut {
+    float4 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+VertOut VSDefault(VertData v)
+{
+    VertOut o;
+    o.pos = mul(float4(v.pos.xyz, 1.0), ViewProj);
+    o.uv = v.uv;
+    return o;
+}
+
+float4 PSDraw(VertOut v) : TARGET
+{
+    float4 color = image.Sample(linear_clamp, v.uv);
+
+    if (debug_view > 0.5 && use_model_matte <= 0.5)
+        return color;
+
+    if (use_model_matte > 0.5) {
+        float matte_alpha = matte.Sample(linear_clamp, v.uv).r;
+        if (debug_view > 0.5)
+            return float4(matte_alpha, matte_alpha, matte_alpha, 1.0);
+
+        if (edge_softness > 0.001) {
+            float softened = matte_alpha;
+            softened += matte.Sample(linear_clamp, v.uv + float2(matte_texel.x, 0.0)).r;
+            softened += matte.Sample(linear_clamp, v.uv - float2(matte_texel.x, 0.0)).r;
+            softened += matte.Sample(linear_clamp, v.uv + float2(0.0, matte_texel.y)).r;
+            softened += matte.Sample(linear_clamp, v.uv - float2(0.0, matte_texel.y)).r;
+            softened *= 0.2;
+            matte_alpha = lerp(matte_alpha, softened, edge_softness);
+        }
+        color.a *= matte_alpha;
+    } else if (test_matte_strength > 0.001) {
+        float2 centered = (v.uv - float2(0.5, 0.5)) / float2(0.34, 0.46);
+        float distance_from_person = dot(centered, centered);
+        float matte = 1.0 - smoothstep(0.75, 1.0, distance_from_person);
+        color.a *= lerp(1.0, matte, test_matte_strength);
+    }
+
+    return color;
+}
+
+technique Draw
+{
+    pass
+    {
+        vertex_shader = VSDefault(v);
+        pixel_shader  = PSDraw(v);
+    }
+}
