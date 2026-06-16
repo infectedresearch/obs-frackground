@@ -64,6 +64,19 @@ This downloads the RobustVideoMatting MobileNetV3 FP16 ONNX model into `models/`
 
 ## Local Install
 
+### Arch Linux / AUR
+
+Install an ONNX Runtime provider, then install Frackground from AUR:
+
+```sh
+sudo pacman -S obs-studio onnxruntime-cuda
+yay -S obs-frackground
+```
+
+For CPU-only testing, use `onnxruntime-cpu` instead of `onnxruntime-cuda`.
+
+### Manual Build
+
 ```sh
 cmake --install build --prefix ~/.local
 ```
