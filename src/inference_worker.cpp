@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026 obs-frackround contributors
+ * SPDX-FileCopyrightText: 2026 obs-frackground contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -60,7 +60,7 @@ void InferenceWorker::configure(std::string model_path, bool prefer_cuda, ModelR
 
         if (model_config_unchanged) {
             config_.temporal_smoothing = config.temporal_smoothing;
-            blog(LOG_INFO, "[obs-frackround] Temporal smoothing updated: %.2f", config_.temporal_smoothing);
+            blog(LOG_INFO, "[obs-frackground] Temporal smoothing updated: %.2f", config_.temporal_smoothing);
             return;
         }
 
@@ -206,17 +206,17 @@ void InferenceWorker::run()
                 ++latest_matte_sequence_;
                 status_ = "Inference ok; last frame " + std::to_string(elapsed_ms) + " ms";
                 if (!logged_inference_ok_) {
-                    blog(LOG_INFO, "[obs-frackround] %s; matte=%dx%d alpha=[%.3f, %.3f]", status_.c_str(),
+                    blog(LOG_INFO, "[obs-frackground] %s; matte=%dx%d alpha=[%.3f, %.3f]", status_.c_str(),
                          latest_matte_.width, latest_matte_.height, min_alpha, max_alpha);
                     logged_inference_ok_ = true;
                 } else if (++inference_ok_log_count_ % 10 == 0) {
-                    blog(LOG_INFO, "[obs-frackround] Inference ok seq=%llu; last frame %lld ms",
+                    blog(LOG_INFO, "[obs-frackground] Inference ok seq=%llu; last frame %lld ms",
                          static_cast<unsigned long long>(latest_matte_sequence_), static_cast<long long>(elapsed_ms));
                 }
             } else {
                 status_ = "Inference failed: " + error;
                 if (!logged_inference_error_) {
-                    blog(LOG_ERROR, "[obs-frackround] %s", status_.c_str());
+                    blog(LOG_ERROR, "[obs-frackground] %s", status_.c_str());
                     logged_inference_error_ = true;
                 }
             }

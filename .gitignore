@@ -1,2 +1,5 @@
 build/
+build-current/
+build-release/
+dist/
 models/*.onnx

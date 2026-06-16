@@ -1,21 +1,33 @@
-# obs-frackround
+# obs-frackground
 
-`obs-frackround` is a Linux-first OBS Studio filter plugin for high-quality person matting and transparent background output.
+`obs-frackground` is a Linux-first OBS Studio filter plugin for high-quality background removal, auto greenscreen, and transparent background output.
 
-The project goal is to outperform generic background-removal plugins by using a GPU-first, video-aware matting pipeline with conservative foreground preservation.
+It uses ONNX Runtime with an RVM-style video matting model to produce a soft alpha matte instead of a hard binary mask. The current release focuses on OBS Studio on Linux, CUDA acceleration when available, and graceful CPU fallback for testing.
 
-Current status: initial OBS filter scaffold with a test matte shader. ONNX Runtime CUDA and RVM-style model inference are the next implementation step.
+## Features
 
-The current build can create an ONNX Runtime session asynchronously from a selected `.onnx` model path and prefers CUDA when available. Frame preprocessing and matte compositing from model output are not implemented yet.
+- OBS video filter for person/background separation.
+- Transparent output for compositing over any OBS scene.
+- Auto greenscreen-style background removal without a physical green screen.
+- ONNX Runtime backend with CUDA preference and CPU fallback.
+- Async worker thread so model loading and inference do not block OBS rendering.
+- Raw frame path for common camera/media formats.
+- Debug mask preview for tuning.
 
-## Goals
+## Status
 
-- OBS Studio 32.x support.
-- Transparent background output first.
-- ONNX Runtime CUDA inference backend.
-- Async inference that does not block OBS rendering.
-- Soft alpha matting instead of hard binary masks.
-- Swappable model backend for future custom or distilled models.
+This project is alpha-quality but usable for testing. Linux is the primary target. The binary artifact is expected to be compatible only with similar OBS/libobs and ONNX Runtime versions to the build host.
+
+## Requirements
+
+- Linux x86_64.
+- OBS Studio with development headers for building.
+- ONNX Runtime C/C++ library and headers.
+- Optional: ONNX Runtime CUDA execution provider and a working NVIDIA CUDA stack.
+- CMake 3.28 or newer.
+- C++20 compiler.
+
+On Arch-style systems the runtime dependency currently resolves as `libonnxruntime.so.1`. Other distributions may package ONNX Runtime differently.
 
 ## Build
 
@@ -24,15 +36,13 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build
 ```
 
-## Download Test Model
+## Download Model
 
 ```sh
 bash scripts/download-rvm-models.sh
 ```
 
-This downloads the official RVM MobileNetV3 FP16 ONNX model into `models/`. The model file is ignored by git.
-
-If present, this model is installed beside the plugin and used as the default model path.
+This downloads the RobustVideoMatting MobileNetV3 FP16 ONNX model into `models/`. If present, the model is installed beside the plugin and used as the default model path.
 
 ## Local Install
 
@@ -40,48 +50,55 @@ If present, this model is installed beside the plugin and used as the default mo
 cmake --install build --prefix ~/.local
 ```
 
-Then restart OBS and add the `Frackround Background Matting` filter to a video source.
+Restart OBS, add the `Frackground Background Removal` filter to a video source, and select or confirm the `Matting model (.onnx)` path.
 
-Use `Matting model (.onnx)` to select an ONNX matting model. Model loading happens on a worker thread so OBS rendering is not blocked.
+## Ready-To-Test Defaults
 
-## Current Frame Path
+- Model: `rvm_mobilenetv3_fp16.onnx` installed beside the plugin.
+- Backend: prefer CUDA, fall back to CPU if CUDA is unavailable.
+- Quality mode: `Balanced`.
+- Inference size: `512x512`.
+- Test matte strength: `0.24`.
+- Foreground protection: `0.0`.
+- Edge softness: `0.35`.
+- Temporal smoothing: `0.13`.
+- Debug view: off.
 
-The current implementation submits frames to RVM from OBS `filter_video` when the source provides one of these raw formats:
+## Supported Frame Paths
+
+The raw frame path supports these OBS video formats:
 
 - `RGBA`
 - `BGRA`
 - `BGRX`
 - `NV12`
 - `I420`
+- `I40A`
+- `I422`
 - `YUY2`
 - `UYVY`
 - `YVYU`
 
-Inference input is resized while preserving source aspect ratio. The matte is uploaded as an 8-bit GPU texture and applied by the OBS shader.
+GPU-rendered sources that do not provide raw frames need additional testing and render-path wiring before they are considered supported in release artifacts.
 
-GPU-only render sources that do not pass through `filter_video` still need a texture readback path.
+## Packaging
 
-The plugin also has a render-texture fallback: GPU-rendered sources are rendered into an offscreen OBS texture, double-buffered through staging surfaces, submitted to the RVM worker, and drawn through the matte shader. Sources that already provide raw frames skip this readback path to avoid duplicate inference work.
+Create a local Linux release artifact with:
 
-## Ready-To-Test Defaults
+```sh
+bash scripts/package-linux.sh
+```
 
-- Model: `models/rvm_mobilenetv3_fp16.onnx`
-- Backend: CUDA enabled
-- Quality mode: `Balanced`
-- Inference size: `512x512`
-- Foreground protection: `0.75`
-- Edge softness: `0.35`
-- Temporal smoothing: `0.70`
+The artifact is written to `dist/` and uses OBS's expected user install layout.
 
-## Runtime Plan
+## Troubleshooting
 
-The initial production pipeline will use:
-
-- ONNX Runtime CUDA for inference.
-- An RVM-style video matting model.
-- A worker thread that drops stale frames and reuses the latest valid matte.
-- OBS GPU shader compositing for alpha output.
+- If OBS does not show the filter, confirm `obs-frackground.so` is in `~/.local/lib/obs-plugins/` and restart OBS.
+- If the filter loads but no matte appears, check the `Runtime status` field and OBS logs for model load or inference errors.
+- If CUDA is unavailable, the plugin should fall back to CPU. CPU inference may be too slow for real-time use.
+- If the model path is empty, install or download `rvm_mobilenetv3_fp16.onnx` and select it in the filter settings.
+- If you upgraded from a pre-release `obs-frackround` build, remove and re-add the filter because the OBS filter ID changed to `obs_frackground_filter`.
 
 ## License
 
-GPL-3.0-or-later. See `LICENSE`.
+GPL-3.0-or-later. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.

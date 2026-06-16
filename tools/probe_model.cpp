@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026 obs-frackround contributors
+ * SPDX-FileCopyrightText: 2026 obs-frackground contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -12,7 +12,7 @@
 int main(int argc, char **argv)
 {
     if (argc < 2) {
-        std::cerr << "usage: frackround-probe <model.onnx> [cpu]\n";
+        std::cerr << "usage: frackground-probe <model.onnx> [cpu]\n";
         return 2;
     }
 

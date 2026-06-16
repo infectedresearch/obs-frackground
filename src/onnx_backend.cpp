@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026 obs-frackround contributors
+ * SPDX-FileCopyrightText: 2026 obs-frackground contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -89,7 +89,7 @@ const OnnxTensorInfo *find_tensor(const std::vector<OnnxTensorInfo> &tensors, co
 
 class OnnxBackend::Impl {
 public:
-    Ort::Env env{ORT_LOGGING_LEVEL_WARNING, "obs-frackround"};
+    Ort::Env env{ORT_LOGGING_LEVEL_WARNING, "obs-frackground"};
     std::unique_ptr<Ort::Session> session;
     std::array<std::vector<float>, 4> rec_fp32;
     std::array<std::vector<Ort::Float16_t>, 4> rec_fp16;

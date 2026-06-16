@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026 obs-frackround contributors
+ * SPDX-FileCopyrightText: 2026 obs-frackground contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 

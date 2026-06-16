@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026 obs-frackround contributors
+ * SPDX-FileCopyrightText: 2026 obs-frackground contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -16,14 +16,14 @@
 #include <vector>
 
 OBS_DECLARE_MODULE()
-OBS_MODULE_USE_DEFAULT_LOCALE("obs-frackround", "en-US")
+OBS_MODULE_USE_DEFAULT_LOCALE("obs-frackground", "en-US")
 
 namespace {
 
-constexpr const char *kFilterId = "obs_frackround_filter";
-constexpr const char *kEffectFile = "frackround.effect";
+constexpr const char *kFilterId = "obs_frackground_filter";
+constexpr const char *kEffectFile = "frackground.effect";
 
-struct FrackroundFilter {
+struct FrackgroundFilter {
     obs_source_t *source = nullptr;
     gs_effect_t *effect = nullptr;
     gs_texrender_t *source_render = nullptr;
@@ -67,21 +67,21 @@ struct FrackroundFilter {
 
 static const char *filter_name(void *)
 {
-    return obs_module_text("FrackroundFilter");
+    return obs_module_text("FrackgroundFilter");
 }
 
-static void load_effect(FrackroundFilter *filter)
+static void load_effect(FrackgroundFilter *filter)
 {
     char *effect_path = obs_module_file(kEffectFile);
     if (!effect_path) {
-        blog(LOG_ERROR, "[obs-frackround] Failed to resolve %s", kEffectFile);
+        blog(LOG_ERROR, "[obs-frackground] Failed to resolve %s", kEffectFile);
         return;
     }
 
     char *error_string = nullptr;
     filter->effect = gs_effect_create_from_file(effect_path, &error_string);
     if (!filter->effect) {
-        blog(LOG_ERROR, "[obs-frackround] Failed to load effect %s: %s", effect_path,
+        blog(LOG_ERROR, "[obs-frackground] Failed to load effect %s: %s", effect_path,
              error_string ? error_string : "unknown error");
     }
 
@@ -91,7 +91,7 @@ static void load_effect(FrackroundFilter *filter)
 
 static void filter_update(void *data, obs_data_t *settings)
 {
-    auto *filter = static_cast<FrackroundFilter *>(data);
+    auto *filter = static_cast<FrackgroundFilter *>(data);
     filter->test_matte_strength = static_cast<float>(obs_data_get_double(settings, "test_matte_strength"));
     filter->foreground_protection = static_cast<float>(obs_data_get_double(settings, "foreground_protection"));
     filter->edge_softness = static_cast<float>(obs_data_get_double(settings, "edge_softness"));
@@ -386,32 +386,32 @@ static std::vector<float> convert_rgba_texture_data_to_rgb_chw(const uint8_t *da
 
 static obs_source_frame *filter_video(void *data, obs_source_frame *frame)
 {
-    auto *filter = static_cast<FrackroundFilter *>(data);
+    auto *filter = static_cast<FrackgroundFilter *>(data);
     if (!filter || !frame || !filter->inference_worker)
         return frame;
 
     if (!filter->inference_worker->model_loaded()) {
         if (!filter->logged_filter_video_waiting) {
-            blog(LOG_INFO, "[obs-frackround] filter_video is receiving frames; waiting for model load");
+            blog(LOG_INFO, "[obs-frackground] filter_video is receiving frames; waiting for model load");
             filter->logged_filter_video_waiting = true;
         }
         return frame;
     }
 
     if (!filter->logged_filter_video_ready) {
-        blog(LOG_INFO, "[obs-frackround] filter_video has model and frame: format=%d %ux%u linesize=[%u,%u,%u]",
+        blog(LOG_INFO, "[obs-frackground] filter_video has model and frame: format=%d %ux%u linesize=[%u,%u,%u]",
              static_cast<int>(frame->format), frame->width, frame->height, frame->linesize[0], frame->linesize[1],
              frame->linesize[2]);
         filter->logged_filter_video_ready = true;
     } else if (++filter->filter_video_log_count % 120 == 0) {
-        blog(LOG_INFO, "[obs-frackround] filter_video frame count=%d format=%d", filter->filter_video_log_count,
+        blog(LOG_INFO, "[obs-frackground] filter_video frame count=%d format=%d", filter->filter_video_log_count,
              static_cast<int>(frame->format));
     }
 
     if (!frame_format_supported(frame->format) || !frame_planes_available(frame)) {
         if (!filter->logged_unsupported_source_frame) {
             blog(LOG_WARNING,
-                 "[obs-frackround] Raw frame format unsupported or incomplete: format=%d planes=%s %ux%u linesize=[%u,%u,%u]",
+                 "[obs-frackground] Raw frame format unsupported or incomplete: format=%d planes=%s %ux%u linesize=[%u,%u,%u]",
                  static_cast<int>(frame->format), frame_planes_available(frame) ? "yes" : "no", frame->width, frame->height,
                  frame->linesize[0], frame->linesize[1], frame->linesize[2]);
             filter->logged_unsupported_source_frame = true;
@@ -427,13 +427,13 @@ static obs_source_frame *filter_video(void *data, obs_source_frame *frame)
     const float downsample_ratio = rvm_downsample_ratio_for(filter->model_config.quality_mode, output_width, output_height);
     if (filter->inference_worker->submit_frame(std::move(rgb), output_width, output_height, downsample_ratio)) {
         if (!filter->logged_first_submit) {
-            blog(LOG_INFO, "[obs-frackround] Submitted raw frame for inference: %ux%u -> %dx%d", frame->width,
+            blog(LOG_INFO, "[obs-frackground] Submitted raw frame for inference: %ux%u -> %dx%d", frame->width,
                  frame->height, output_width, output_height);
             filter->logged_first_submit = true;
         }
         filter->raw_frame_grace = 120;
     } else if (!filter->logged_submit_dropped) {
-        blog(LOG_WARNING, "[obs-frackround] Raw frame submission dropped: model_loaded=%s size=%zu expected=%zu",
+        blog(LOG_WARNING, "[obs-frackground] Raw frame submission dropped: model_loaded=%s size=%zu expected=%zu",
              filter->inference_worker->model_loaded() ? "yes" : "no", rgb.size(),
              static_cast<size_t>(3 * output_width * output_height));
         filter->logged_submit_dropped = true;
@@ -442,7 +442,7 @@ static obs_source_frame *filter_video(void *data, obs_source_frame *frame)
     return frame;
 }
 
-static void submit_source_frame_for_inference(FrackroundFilter *filter, obs_source_t *target)
+static void submit_source_frame_for_inference(FrackgroundFilter *filter, obs_source_t *target)
 {
     if (!filter || !target || !filter->inference_worker || !filter->inference_worker->model_loaded())
         return;
@@ -450,7 +450,7 @@ static void submit_source_frame_for_inference(FrackroundFilter *filter, obs_sour
     obs_source_frame *frame = obs_source_get_frame(target);
     if (!frame) {
         if (!filter->logged_no_source_frame) {
-            blog(LOG_INFO, "[obs-frackround] Target source did not provide an async frame for direct inference");
+            blog(LOG_INFO, "[obs-frackground] Target source did not provide an async frame for direct inference");
             filter->logged_no_source_frame = true;
         }
         return;
@@ -463,7 +463,7 @@ static void submit_source_frame_for_inference(FrackroundFilter *filter, obs_sour
             const float downsample_ratio = rvm_downsample_ratio_for(filter->model_config.quality_mode, output_width, output_height);
             if (filter->inference_worker->submit_frame(std::move(rgb), output_width, output_height, downsample_ratio)) {
                 if (!filter->logged_first_submit) {
-                    blog(LOG_INFO, "[obs-frackround] Submitted source frame for inference: %ux%u -> %dx%d", frame->width,
+                    blog(LOG_INFO, "[obs-frackground] Submitted source frame for inference: %ux%u -> %dx%d", frame->width,
                          frame->height, output_width, output_height);
                     filter->logged_first_submit = true;
                 }
@@ -471,7 +471,7 @@ static void submit_source_frame_for_inference(FrackroundFilter *filter, obs_sour
             }
         }
     } else if (!filter->logged_unsupported_source_frame) {
-        blog(LOG_WARNING, "[obs-frackround] Target source frame format unsupported or incomplete: format=%d planes=%s %ux%u",
+        blog(LOG_WARNING, "[obs-frackground] Target source frame format unsupported or incomplete: format=%d planes=%s %ux%u",
              static_cast<int>(frame->format), frame_planes_available(frame) ? "yes" : "no", frame->width, frame->height);
         filter->logged_unsupported_source_frame = true;
     }
@@ -479,12 +479,12 @@ static void submit_source_frame_for_inference(FrackroundFilter *filter, obs_sour
     obs_source_release_frame(target, frame);
 }
 
-static void update_matte_texture(FrackroundFilter *filter)
+static void update_matte_texture(FrackgroundFilter *filter)
 {
     RvmFrameResult matte;
     if (!filter->inference_worker || !filter->inference_worker->latest_matte(matte)) {
         if (filter->inference_worker && filter->inference_worker->model_loaded() && !filter->logged_no_latest_matte) {
-            blog(LOG_INFO, "[obs-frackround] No latest matte available on render thread yet");
+            blog(LOG_INFO, "[obs-frackground] No latest matte available on render thread yet");
             filter->logged_no_latest_matte = true;
         }
         return;
@@ -513,7 +513,7 @@ static void update_matte_texture(FrackroundFilter *filter)
         const uint8_t *data = filter->matte_upload.data();
         filter->matte_texture = gs_texture_create(width, height, GS_R8, 1, &data, GS_DYNAMIC);
         if (!filter->matte_texture && !filter->logged_matte_texture_failed) {
-            blog(LOG_ERROR, "[obs-frackround] Failed to create matte texture: %ux%u", width, height);
+            blog(LOG_ERROR, "[obs-frackground] Failed to create matte texture: %ux%u", width, height);
             filter->logged_matte_texture_failed = true;
         }
         filter->matte_width = width;
@@ -525,15 +525,15 @@ static void update_matte_texture(FrackroundFilter *filter)
     filter->last_uploaded_matte_sequence = matte_sequence;
 
     if (!filter->logged_first_matte) {
-        blog(LOG_INFO, "[obs-frackround] Uploaded first matte texture: %ux%u seq=%llu", width, height,
+        blog(LOG_INFO, "[obs-frackground] Uploaded first matte texture: %ux%u seq=%llu", width, height,
              static_cast<unsigned long long>(matte_sequence));
         filter->logged_first_matte = true;
     } else if (++filter->matte_upload_log_count % 10 == 0) {
-        blog(LOG_INFO, "[obs-frackround] Uploaded matte texture seq=%llu", static_cast<unsigned long long>(matte_sequence));
+        blog(LOG_INFO, "[obs-frackground] Uploaded matte texture seq=%llu", static_cast<unsigned long long>(matte_sequence));
     }
 }
 
-static void reset_stage_surfaces(FrackroundFilter *filter)
+static void reset_stage_surfaces(FrackgroundFilter *filter)
 {
     for (auto *&surface : filter->stage_surfaces) {
         if (surface) {
@@ -549,7 +549,7 @@ static void reset_stage_surfaces(FrackroundFilter *filter)
     filter->stage_valid[1] = false;
 }
 
-static bool ensure_stage_surfaces(FrackroundFilter *filter, uint32_t width, uint32_t height)
+static bool ensure_stage_surfaces(FrackgroundFilter *filter, uint32_t width, uint32_t height)
 {
     if (filter->stage_surfaces[0] && filter->stage_surfaces[1] && filter->stage_width == width &&
         filter->stage_height == height)
@@ -569,7 +569,7 @@ static bool ensure_stage_surfaces(FrackroundFilter *filter, uint32_t width, uint
     return true;
 }
 
-static void submit_staged_texture_frame(FrackroundFilter *filter, uint32_t width, uint32_t height)
+static void submit_staged_texture_frame(FrackgroundFilter *filter, uint32_t width, uint32_t height)
 {
     if (!filter->inference_worker || !filter->inference_worker->model_loaded())
         return;
@@ -577,7 +577,7 @@ static void submit_staged_texture_frame(FrackroundFilter *filter, uint32_t width
     const int read_index = filter->stage_index;
     if (!filter->stage_valid[read_index]) {
         if (!filter->logged_stage_wait) {
-            blog(LOG_INFO, "[obs-frackround] Waiting for staged texture readback");
+            blog(LOG_INFO, "[obs-frackground] Waiting for staged texture readback");
             filter->logged_stage_wait = true;
         }
         return;
@@ -587,14 +587,14 @@ static void submit_staged_texture_frame(FrackroundFilter *filter, uint32_t width
     uint32_t linesize = 0;
     if (!gs_stagesurface_map(filter->stage_surfaces[read_index], &data, &linesize)) {
         if (!filter->logged_stage_map_failed) {
-            blog(LOG_WARNING, "[obs-frackround] Failed to map staged texture readback");
+            blog(LOG_WARNING, "[obs-frackground] Failed to map staged texture readback");
             filter->logged_stage_map_failed = true;
         }
         return;
     }
 
     if (!filter->logged_stage_ready) {
-        blog(LOG_INFO, "[obs-frackround] Mapped staged texture readback: %ux%u linesize=%u", width, height, linesize);
+        blog(LOG_INFO, "[obs-frackground] Mapped staged texture readback: %ux%u linesize=%u", width, height, linesize);
         filter->logged_stage_ready = true;
     }
 
@@ -606,18 +606,18 @@ static void submit_staged_texture_frame(FrackroundFilter *filter, uint32_t width
         const float downsample_ratio = rvm_downsample_ratio_for(filter->model_config.quality_mode, output_width, output_height);
         if (filter->inference_worker->submit_frame(std::move(rgb), output_width, output_height, downsample_ratio) &&
             !filter->logged_first_submit) {
-            blog(LOG_INFO, "[obs-frackround] Submitted rendered texture for inference: %ux%u -> %dx%d", width, height,
+            blog(LOG_INFO, "[obs-frackground] Submitted rendered texture for inference: %ux%u -> %dx%d", width, height,
                  output_width, output_height);
             filter->logged_first_submit = true;
         } else if (++filter->submit_log_count % 60 == 0) {
-            blog(LOG_INFO, "[obs-frackround] Submitted rendered texture frame count=%d", filter->submit_log_count);
+            blog(LOG_INFO, "[obs-frackground] Submitted rendered texture frame count=%d", filter->submit_log_count);
         }
     }
 
     gs_stagesurface_unmap(filter->stage_surfaces[read_index]);
 }
 
-static gs_texture_t *render_target_to_texture(FrackroundFilter *filter, obs_source_t *target, uint32_t width,
+static gs_texture_t *render_target_to_texture(FrackgroundFilter *filter, obs_source_t *target, uint32_t width,
                                               uint32_t height, bool submit_for_inference)
 {
     if (!filter->source_render)
@@ -650,7 +650,7 @@ static gs_texture_t *render_target_to_texture(FrackroundFilter *filter, obs_sour
 
 static void *filter_create(obs_data_t *settings, obs_source_t *source)
 {
-    auto filter = std::make_unique<FrackroundFilter>();
+    auto filter = std::make_unique<FrackgroundFilter>();
     filter->source = source;
     filter->inference_worker = std::make_unique<InferenceWorker>();
 
@@ -661,12 +661,12 @@ static void *filter_create(obs_data_t *settings, obs_source_t *source)
             provider_list << ", ";
         provider_list << providers[i];
     }
-    blog(LOG_INFO, "[obs-frackround] ONNX Runtime providers: %s", provider_list.str().c_str());
+    blog(LOG_INFO, "[obs-frackground] ONNX Runtime providers: %s", provider_list.str().c_str());
     blog(filter->inference_worker->cuda_available() ? LOG_INFO : LOG_WARNING,
-         "[obs-frackround] CUDA execution provider %s",
+         "[obs-frackground] CUDA execution provider %s",
          filter->inference_worker->cuda_available() ? "available" : "not available");
     blog(filter->inference_worker->migraphx_available() ? LOG_INFO : LOG_WARNING,
-         "[obs-frackround] MIGraphX execution provider %s",
+         "[obs-frackground] MIGraphX execution provider %s",
          filter->inference_worker->migraphx_available() ? "available" : "not available");
     filter->inference_worker->start();
 
@@ -675,13 +675,13 @@ static void *filter_create(obs_data_t *settings, obs_source_t *source)
     obs_leave_graphics();
 
     filter_update(filter.get(), settings);
-    blog(LOG_INFO, "[obs-frackround] Filter created");
+    blog(LOG_INFO, "[obs-frackground] Filter created");
     return filter.release();
 }
 
 static void filter_destroy(void *data)
 {
-    auto *filter = static_cast<FrackroundFilter *>(data);
+    auto *filter = static_cast<FrackgroundFilter *>(data);
     if (!filter)
         return;
 
@@ -702,8 +702,8 @@ static void filter_defaults(obs_data_t *settings)
 {
     char *default_model_path = obs_module_file("rvm_mobilenetv3_fp16.onnx");
 
-    obs_data_set_default_double(settings, "test_matte_strength", 0.0);
-    obs_data_set_default_double(settings, "foreground_protection", 0.75);
+    obs_data_set_default_double(settings, "test_matte_strength", 0.24);
+    obs_data_set_default_double(settings, "foreground_protection", 0.0);
     obs_data_set_default_double(settings, "edge_softness", 0.35);
     obs_data_set_default_double(settings, "temporal_smoothing", 0.13);
     obs_data_set_default_string(settings, "model_path", default_model_path ? default_model_path : "");
@@ -747,7 +747,7 @@ static obs_properties_t *filter_properties(void *)
 
 static void filter_render(void *data, gs_effect_t *)
 {
-    auto *filter = static_cast<FrackroundFilter *>(data);
+    auto *filter = static_cast<FrackgroundFilter *>(data);
     obs_source_t *target = obs_filter_get_target(filter->source);
     if (!target) {
         obs_source_skip_video_filter(filter->source);
@@ -824,6 +824,6 @@ bool obs_module_load(void)
     info.video_render = filter_render;
 
     obs_register_source(&info);
-    blog(LOG_INFO, "[obs-frackround] Plugin loaded");
+    blog(LOG_INFO, "[obs-frackground] Plugin loaded");
     return true;
 }
