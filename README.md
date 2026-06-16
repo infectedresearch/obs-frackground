@@ -75,6 +75,8 @@ yay -S obs-frackground
 
 For CPU-only testing, use `onnxruntime-cpu` instead of `onnxruntime-cuda`.
 
+AUR package: https://aur.archlinux.org/packages/obs-frackground
+
 ### Manual Build
 
 ```sh
